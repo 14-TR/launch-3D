@@ -28,31 +28,73 @@
         init();
 
         function init() {
-            // Scene setup
             scene = new THREE.Scene();
 
-            // Camera setup
             camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 100);
             camera.position.z = 3;
 
-            // Renderer setup
             renderer = new THREE.WebGLRenderer({ antialias: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
             document.body.appendChild(renderer.domElement);
 
-            // Controls
             controls = new OrbitControls(camera, renderer.domElement);
             controls.enableDamping = true;
 
-            // Sphere (Earth placeholder)
+            // Load Earth texture
+            const textureLoader = new THREE.TextureLoader();
+            const earthTexture = textureLoader.load('https://raw.githubusercontent.com/14-TR/webgpu-earth/main/textures/earth_day_2k.jpg');
+
+            // Sphere with texture
             const geometry = new THREE.SphereGeometry(1, 64, 64);
-            const material = new THREE.MeshStandardMaterial({ color: 0xaaaaaa, roughness: 0.5 });
+            const material = new THREE.MeshStandardMaterial({ map: earthTexture, roughness: 0.5 });
             sphere = new THREE.Mesh(geometry, material);
             scene.add(sphere);
 
             // Coordinate System - Axes Helper
-            axesHelper = new THREE.AxesHelper(2); // Length of axes = 2 units
+            axesHelper = new THREE.AxesHelper(2);
             scene.add(axesHelper);
+
+            // Latitude/Longitude Lines
+            const latLongGroup = new THREE.Group();
+            const latSegments = 9;
+            const lonSegments = 18;
+
+            for (let i = 1; i < latSegments; i++) {
+                const latAngle = (i / latSegments) * Math.PI - Math.PI / 2;
+                const latRadius = Math.cos(latAngle);
+                const latY = Math.sin(latAngle);
+
+                const latPoints = [];
+                const segments = 64;
+                for (let k = 0; k <= segments; k++) {
+                    const theta = (k / segments) * 2 * Math.PI;
+                    latPoints.push(new THREE.Vector3(Math.cos(theta) * latRadius, latY, Math.sin(theta) * latRadius));
+                }
+                const latGeometry = new THREE.BufferGeometry().setFromPoints(latPoints);
+                const latMaterial = new THREE.LineBasicMaterial({ color: 0x4444ff });
+                const latLine = new THREE.LineLoop(latGeometry, latMaterial);
+                latLongGroup.add(latLine);
+            }
+
+            for (let j = 0; j < lonSegments; j++) {
+                const lonPoints = [];
+                const segments = 64;
+                const lonAngle = (j / lonSegments) * 2 * Math.PI;
+                for (let k = 0; k <= segments; k++) {
+                    const phi = (k / segments) * Math.PI - Math.PI / 2;
+                    lonPoints.push(new THREE.Vector3(
+                        Math.cos(phi) * Math.cos(lonAngle),
+                        Math.sin(phi),
+                        Math.cos(phi) * Math.sin(lonAngle)
+                    ));
+                }
+                const lonGeometry = new THREE.BufferGeometry().setFromPoints(lonPoints);
+                const lonMaterial = new THREE.LineBasicMaterial({ color: 0x44ff44 });
+                const lonLine = new THREE.Line(lonGeometry, lonMaterial);
+                latLongGroup.add(lonLine);
+            }
+
+            scene.add(latLongGroup);
 
             // Lighting
             const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
@@ -62,7 +104,6 @@
             directionalLight.position.set(5, 5, 5);
             scene.add(directionalLight);
 
-            // Handle resize
             window.addEventListener('resize', onWindowResize);
 
             animate();
@@ -76,6 +117,7 @@
 
         function animate() {
             requestAnimationFrame(animate);
+            sphere.rotation.y += 0.001;
             controls.update();
             renderer.render(scene, camera);
         }
