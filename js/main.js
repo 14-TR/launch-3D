@@ -10,7 +10,7 @@ function init() {
     ({ earthGroup, scene, camera, renderer } = initEarthGroup());
     controls = initControls(camera, renderer.domElement);
     initMarkers(earthGroup, camera);
-    initOrbitTracking(earthGroup);
+    initOrbitTracking(earthGroup, camera);
     handleUIControls();
     animateWithOrbit(earthGroup, controls, camera, renderer, updateOrbit);
 }
